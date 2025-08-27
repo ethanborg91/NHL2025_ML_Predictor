@@ -10,6 +10,7 @@ if __name__ == "__main__":
     print("Filtered raw shape (2020-2025):", df_raw_recent.shape)  # ~50k rows, smaller memory
 
     # Process to game-level
+    #Comment for push
     df_all = df_raw_recent[df_raw_recent['situation'] == 'all'].copy()
     df_home = df_all[df_all['home_or_away'] == 'HOME']
     df_games = df_home[['gameDate', 'playerTeam', 'opposingTeam', 'goalsFor', 'goalsAgainst', 'season']].copy()
