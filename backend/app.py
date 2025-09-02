@@ -13,14 +13,19 @@ For training, each team's stats from season n predict its position in season n+1
 Usage: python nhl_prediction.py
 Requires: pandas, numpy, scikit-learn.
 """
-import os
+from flask import Flask, jsonify, request
+from flask_cors import CORS
 from collections import defaultdict
 from typing import Dict, List, Tuple
-import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
+import os
+import requests
+
+app = Flask(__name__)
+CORS(app)
 
 def parse_match_results(df: pd.DataFrame) -> pd.DataFrame:
     """Parse goals and add OT indicator.
@@ -141,14 +146,14 @@ def prepare_training_data(season_files: List[str]) -> Tuple[pd.DataFrame, pd.Ser
     ]
     return X_train, y_train, latest_features_df
 
-def build_and_train_model(X: pd.DataFrame, y: pd.Series) -> Pipeline:
+def build_and_train_model(X: pd.DataFrame, y: pd.Series, seed: int) -> Pipeline:
     """Build pipeline with scaler and RandomForestClassifier."""
     model = Pipeline([
         ("scaler", StandardScaler()),
         ("rf", RandomForestClassifier(
             n_estimators=100,
             max_depth=8,
-            random_state=42,
+            random_state=seed,
             class_weight="balanced"
         ))
     ])
@@ -168,25 +173,32 @@ def predict_league_table(model: Pipeline, features: pd.DataFrame) -> pd.DataFram
     prediction_df["predicted_rank"] = prediction_df.index + 1
     return prediction_df[["predicted_rank", "team", "expected_position"]]
 
-def main():
-    # Season files
-    season_files = [
-        os.path.join(os.path.dirname(__file__), "nhl_2021-22.csv"),
-        os.path.join(os.path.dirname(__file__), "nhl_2022-23.csv"),
-        os.path.join(os.path.dirname(__file__), "nhl_2023-24.csv"),
-        os.path.join(os.path.dirname(__file__), "nhl_2024-25.csv"),
-    ]
-    X_train, y_train, latest_features = prepare_training_data(season_files)
-    model = build_and_train_model(X_train, y_train)
-    predictions = predict_league_table(model, latest_features)
-    # Truncate to 32 teams
-    predictions = predictions.iloc[:32].copy()
-    print("Predicted NHL 2025-26 standings (1 = top):")
-    for _, row in predictions.iterrows():
-        print(
-            f"{int(row['predicted_rank'])}. {row['team']} "
-            f"(expected pos {row['expected_position']:.2f})"
-        )
+@app.route('/')
+def index():
+    # Serve the HTML directly (or use a template folder if expanding)
+    with open('index.html', 'r') as f:
+        html = f.read()
+    return html
+
+@app.route('/predict', methods=['GET'])
+def predict():
+    try:
+        start_year = int(request.args.get('start_year', 2021))
+        seed = int(request.args.get('seed', 42))
+        all_years = [2021, 2022, 2023, 2024]
+        if start_year not in all_years:
+            raise ValueError("Invalid start_year; must be 2021-2024")
+        selected_years = [y for y in all_years if y >= start_year]
+        if len(selected_years) < 2:
+            selected_years = all_years
+        season_files = [f"nhl_{y}-{str((y + 1) % 100).zfill(2)}.csv" for y in selected_years]
+        X_train, y_train, latest_features = prepare_training_data(season_files)
+        model = build_and_train_model(X_train, y_train, seed)
+        predictions = predict_league_table(model, latest_features)
+        predictions = predictions.iloc[:32].copy()  # Truncate to 32
+        return jsonify(predictions.to_dict(orient='records'))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == "__main__":
-    main()
+    app.run(debug=True)
