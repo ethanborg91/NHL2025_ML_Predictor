@@ -23,7 +23,7 @@ function App() {
     setPredictions([]);
     try {
       const response = await fetch(
-        `http://localhost:5000/predict?start_year=${startYear}&seed=${seed}`
+        `${process.env.BACKEND_URL}/predict?start_year=${startYear}&seed=${seed}`
       );
       if (!response.ok) throw new Error("Prediction failed");
       const data = await response.json();
