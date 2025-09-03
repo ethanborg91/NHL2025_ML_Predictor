@@ -89,7 +89,12 @@ function App() {
       >
         Run Prediction
       </button>
-      {loading && <div className="text-center mt-4">Loading...</div>}
+      {loading && (
+        <div className="text-center mt-4">
+          Loading... (Request may take up to a minute due to Render free plan
+          spinning down with inactivity)
+        </div>
+      )}
       {error && (
         <div className="text-center text-red-500 mt-4">Error: {error}</div>
       )}
