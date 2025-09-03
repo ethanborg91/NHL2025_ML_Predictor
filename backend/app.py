@@ -173,13 +173,6 @@ def predict_league_table(model: Pipeline, features: pd.DataFrame) -> pd.DataFram
     prediction_df["predicted_rank"] = prediction_df.index + 1
     return prediction_df[["predicted_rank", "team", "expected_position"]]
 
-@app.route('/')
-def index():
-    # Serve the HTML directly (or use a template folder if expanding)
-    with open('index.html', 'r') as f:
-        html = f.read()
-    return html
-
 @app.route('/predict', methods=['GET'])
 def predict():
     try:
