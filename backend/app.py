@@ -173,6 +173,7 @@ def predict_league_table(model: Pipeline, features: pd.DataFrame) -> pd.DataFram
     prediction_df["predicted_rank"] = prediction_df.index + 1
     return prediction_df[["predicted_rank", "team", "expected_position"]]
 
+# Request for prediction
 @app.route('/predict', methods=['GET'])
 def predict():
     try:
